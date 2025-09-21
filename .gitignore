@@ -1,14 +1,10 @@
 # Node.js dependencies
 /node_modules
 
-# Project folders to ignore
-yolo/
-
-# Model files
-yolov8n.pt
-
 # Editor history (e.g., VS Code extensions)
 .history/
 
 # Other hidden folders
 .lh/
+
+
