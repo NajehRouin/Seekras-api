@@ -19,6 +19,8 @@ import PostCommentModel from "../models/PostComment";
 import { Types } from "mongoose";
 import path from "path";
 import UserModel from "../models/User";
+import { uploadMultipleToCloudinary } from "../utils/cloudinary";
+import fs from "fs/promises";
 //get All Post
 
 export const getAllPostsController = async (
@@ -97,10 +99,31 @@ export const createPostController = async (
   } = req.body;
 
   const files = req.files as Express.Multer.File[];
-  const mediaUrls =
-    files?.map((file) => `/uploads/posts/${file.filename}`) || [];
-  const image =
-    files && files.length > 0 ? `uploads/posts/${files[0].filename}` : null;
+  let mediaUrls: string[] = [];
+  let image: string | null = null;
+
+  if (files && files.length > 0) {
+    const filePaths = files.map((file: any) => file.path);
+    const result = await uploadMultipleToCloudinary(filePaths, {
+      folder: "seekras/posts",
+    });
+
+    // Map Cloudinary results to mediaUrls (array of URLs)
+    mediaUrls = result.map((item) => item.url);
+    // Set the first image URL as image
+    image = result[0]?.url || null;
+
+    // Clean up temporary files
+    await Promise.all(
+      filePaths.map((path) =>
+        fs
+          .unlink(path)
+          .catch((err) =>
+            console.error("Erreur suppression fichier temp:", err)
+          )
+      )
+    );
+  }
   // Convertir peopleTag depuis une chaîne JSON en tableau d'IDs
   let peopleTagIds: Types.ObjectId[] = [];
   if (peopleTag) {

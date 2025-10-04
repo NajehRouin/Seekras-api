@@ -1,8 +1,43 @@
 import Product, { IProduct } from "../models/Products";
 
 import mongoose from "mongoose";
-
+import fs from "fs/promises";
+import { uploadMultipleToCloudinary } from "../utils/cloudinary";
 export class ProductService {
+  // async createProduct(
+  //   userId: string,
+  //   data: Partial<IProduct>,
+  //   files?: Express.Multer.File[]
+  // ): Promise<IProduct> {
+  //   let image = data.image || "";
+  //   let additionalImages: string[] = [];
+
+  //   if (files && files.length > 0) {
+  //     files.forEach((file) => {
+  //       const filePath = `/uploads/products/${file.filename}`;
+  //       if (additionalImages.length === 0) {
+  //         image = image || filePath; // Si image non fournie, prendre la 1ère
+  //       }
+  //       additionalImages.push(filePath);
+  //     });
+
+  //     if (!data.image && additionalImages.length > 0) {
+  //       image = additionalImages[0]; // Prendre automatiquement la 1ère image
+  //     }
+  //   }
+
+  //   const product = new Product({
+  //     ...data,
+  //     userId,
+  //     image,
+  //     additionalImages,
+  //   });
+
+  //   return await product.save();
+  // }
+
+  // Récupérer tous les produits
+
   async createProduct(
     userId: string,
     data: Partial<IProduct>,
@@ -12,16 +47,34 @@ export class ProductService {
     let additionalImages: string[] = [];
 
     if (files && files.length > 0) {
-      files.forEach((file) => {
-        const filePath = `/uploads/products/${file.filename}`;
-        if (additionalImages.length === 0) {
-          image = image || filePath; // Si image non fournie, prendre la 1ère
-        }
-        additionalImages.push(filePath);
-      });
+      try {
+        const filePaths = files.map((file) => file.path);
+        const uploadResults = await uploadMultipleToCloudinary(filePaths, {
+          folder: "seekras/products",
+        });
 
-      if (!data.image && additionalImages.length > 0) {
-        image = additionalImages[0]; // Prendre automatiquement la 1ère image
+        // Map Cloudinary results to additionalImages (array of URLs)
+        additionalImages = uploadResults.map((result) => result.url);
+
+        // Set image to the first Cloudinary URL if not provided in data
+        if (!data.image && uploadResults.length > 0) {
+          image = uploadResults[0].url;
+        }
+
+        // Clean up temporary files
+        await Promise.all(
+          filePaths.map((path) =>
+            fs
+              .unlink(path)
+              .catch((err) =>
+                console.error("Erreur suppression fichier temp:", err)
+              )
+          )
+        );
+      } catch (error: any) {
+        throw new Error(
+          `Erreur lors du téléversement des images : ${error.message}`
+        );
       }
     }
 
@@ -35,7 +88,6 @@ export class ProductService {
     return await product.save();
   }
 
-  // Récupérer tous les produits
   async getAllProducts(userId: string): Promise<IProduct[]> {
     return await Product.find({ userId: { $ne: userId } });
   }

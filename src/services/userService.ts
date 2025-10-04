@@ -38,6 +38,7 @@ export const findAllusers = async () => {
       "profileId",
       "profileImage fullName"
     );
+
     return findUsers;
   } catch (error: any) {
     throw new Error("Error fetching Users: " + error.message || String(error));
@@ -60,57 +61,6 @@ export const getUserById = async (userId: string) => {
     throw new Error("Error fetching Users: " + error.message || String(error));
   }
 };
-
-// export const findUser = async (UserCurrent: string, userId: string) => {
-//   try {
-//     const currentUser = await UserModel.findById(UserCurrent).populate(
-//       "profileId",
-//       "profileImage fullName"
-//     );
-//     let findUser = await UserModel.findById({ _id: userId }).populate(
-//       "profileId",
-//       "profileImage fullName"
-//     );
-//     if (!currentUser || !findUser) {
-//       throw new Error("User or sender not found");
-//     }
-//     if (UserCurrent === userId) {
-//       const posts = await PostsModel.find({
-//         userId: UserCurrent,
-//         active: true,
-//       });
-//       return {
-//         user: currentUser,
-//         isfriends: true,
-//         posts: posts,
-//       };
-//     } else {
-//       const posts = await PostsModel.find({
-//         userId: userId,
-//         active: true,
-//       });
-//       if (
-//         currentUser.following.includes(new Types.ObjectId(userId)) ||
-//         currentUser.friends.includes(new Types.ObjectId(userId)) ||
-//         currentUser.followers.includes(new Types.ObjectId(userId))
-//       ) {
-//         return {
-//           user: findUser,
-//           isfriends: true,
-//           posts: posts,
-//         };
-//       } else {
-//         return {
-//           user: findUser,
-//           isfriends: false,
-//           posts: posts,
-//         };
-//       }
-//     }
-//   } catch (error: any) {
-//     throw new Error("Error fetching Users: " + error.message || String(error));
-//   }
-// };
 
 export const findUser = async (UserCurrent: string, userId: string) => {
   try {

@@ -5,6 +5,7 @@ import path from "path";
 import MessageGroupe, { Message } from "../models/MessageGroupe";
 import UserModel from "../models/User";
 import { io } from "../index";
+import { uploadToCloudinary } from "../utils/cloudinary";
 export class ChatGroupService {
   // Create a new chat group with image upload
   async createChatGroup(
@@ -14,9 +15,11 @@ export class ChatGroupService {
   ): Promise<GroupInterface> {
     let imagePath = "";
 
-    // Handle image upload if provided
     if (file) {
-      imagePath = `/uploads/groupe/${file.filename}`;
+      const result = await uploadToCloudinary(file.path, {
+        folder: "seekras/groupe",
+      });
+      imagePath = result?.url;
     }
 
     // Parse and validate members
@@ -134,9 +137,11 @@ export class ChatGroupService {
 
       let imagePath = data.image;
 
-      // Handle image upload if provided
       if (file) {
-        imagePath = `/uploads/groupe/${file.filename}`;
+        const result = await uploadToCloudinary(file.path, {
+          folder: "seekras/groupe",
+        });
+        imagePath = result?.url;
       }
 
       const updatedData = { ...data, image: imagePath };
@@ -177,14 +182,6 @@ export class ChatGroupService {
       const group = await ChatGroup.findById(id);
       if (!group) {
         throw new Error("Chat group not found");
-      }
-
-      // Delete associated image
-      if (group.image) {
-        const imagePath = path.join(__dirname, "../../", group.image);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
       }
 
       await ChatGroup.findByIdAndDelete(id).exec();

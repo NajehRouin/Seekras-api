@@ -16,6 +16,9 @@ import {
   sendFriendRequest,
   findUserByEmail,
 } from "../services/userService";
+import { uploadToCloudinary } from "../utils/cloudinary";
+import UserModel from "../models/User";
+import UserProfileModel from "../models/UserProfile";
 
 export const CurrentUser = async (req: AuthenticatedRequest, res: Response) => {
   res.json({ user: req.user.id });
@@ -258,5 +261,214 @@ export const getUserByEmail = async (req: Request, res: Response) => {
     return res.status(500).json({
       error: (error as Error).message,
     });
+  }
+};
+
+export const UpdateBasicInfo = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const { username, bio, email, location, favoriteActivities } = req.body;
+
+  try {
+    const findCurrentUser = await UserModel.findById(req.user?.id?._id);
+    const findProfil = await UserProfileModel.findOne({
+      _id: findCurrentUser?.profileId,
+    });
+
+    if (!findCurrentUser || !findProfil) {
+      return res
+        .status(404)
+        .json({ error: "Utilisateur ou profil non trouvé" });
+    }
+
+    const profileUpdate: any = {
+      $set: {
+        fullName: username || findProfil.fullName,
+        location: location || findProfil.location,
+        bio: bio || findProfil.bio,
+      },
+    };
+
+    let activitiesToUpdate = JSON.parse(favoriteActivities);
+
+    if (activitiesToUpdate.length > 0) {
+      profileUpdate.$set.favoriteActivities = activitiesToUpdate;
+    }
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.path, {
+        folder: "seekras/profile",
+      });
+      profileUpdate.$set.profileImage = result?.url;
+    }
+
+    await UserProfileModel.findOneAndUpdate(
+      { _id: findCurrentUser.profileId },
+      profileUpdate,
+      { new: true }
+    );
+
+    await UserModel.findByIdAndUpdate(
+      { _id: req.user?.id?._id },
+      {
+        email: email || findCurrentUser.email,
+        firstName: username || findCurrentUser.firstName,
+        lastName: username || findCurrentUser.lastName,
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({ message: "Modifié avec succès" });
+  } catch (error) {
+    console.error("Erreur :", error);
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+export const UpdatePrivacySettings = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const { privacySettings } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe
+    const findCurrentUser = await UserModel.findById(req.user?.id?._id);
+    const findProfil = await UserProfileModel.findOne({
+      _id: findCurrentUser?.profileId,
+    });
+
+    if (!findCurrentUser || !findProfil) {
+      return res
+        .status(404)
+        .json({ error: "Utilisateur ou profil non trouvé" });
+    }
+
+    // Valider et parser privacySettings
+    let settingsToUpdate: {
+      showVisitedPlaces: boolean;
+      showAchievements: boolean;
+      allowTagging: boolean;
+      publicProfile: boolean;
+    };
+
+    try {
+      settingsToUpdate = JSON.parse(privacySettings);
+      if (
+        typeof settingsToUpdate !== "object" ||
+        typeof settingsToUpdate.showVisitedPlaces !== "boolean" ||
+        typeof settingsToUpdate.showAchievements !== "boolean" ||
+        typeof settingsToUpdate.allowTagging !== "boolean" ||
+        typeof settingsToUpdate.publicProfile !== "boolean"
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Format invalide pour privacySettings" });
+      }
+    } catch (error) {
+      return res
+        .status(400)
+        .json({ error: "Format JSON invalide pour privacySettings" });
+    }
+
+    // Mettre à jour le profil
+    const profileUpdate = {
+      $set: {
+        privacySettings: settingsToUpdate,
+      },
+    };
+
+    const updatedProfile = await UserProfileModel.findOneAndUpdate(
+      { _id: findCurrentUser.profileId },
+      profileUpdate,
+      { new: true }
+    );
+
+    await UserProfileModel.findOneAndUpdate(
+      { _id: findCurrentUser.profileId },
+      { profilPublic: settingsToUpdate.publicProfile },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "Paramètres de confidentialité mis à jour avec succès",
+      profile: updatedProfile,
+    });
+  } catch (error: any) {
+    console.error("Erreur complète :", error);
+    return res
+      .status(500)
+      .json({ error: "Erreur serveur", details: error.message });
+  }
+};
+
+export const updatNotification = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const { notificationSettings } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe
+    const findCurrentUser = await UserModel.findById(req.user?.id?._id);
+    const findProfil = await UserProfileModel.findOne({
+      _id: findCurrentUser?.profileId,
+    });
+
+    if (!findCurrentUser || !findProfil) {
+      return res
+        .status(404)
+        .json({ error: "Utilisateur ou profil non trouvé" });
+    }
+
+    // Valider et parser privacySettings
+    let settingsToUpdate: {
+      newComments: boolean;
+      newLikes: boolean;
+      newFollowers: boolean;
+      appUpdates: boolean;
+    };
+
+    try {
+      settingsToUpdate = JSON.parse(notificationSettings);
+      if (
+        typeof settingsToUpdate !== "object" ||
+        typeof settingsToUpdate.newComments !== "boolean" ||
+        typeof settingsToUpdate.newLikes !== "boolean" ||
+        typeof settingsToUpdate.newFollowers !== "boolean" ||
+        typeof settingsToUpdate.appUpdates !== "boolean"
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Format invalide pour notificationSettings" });
+      }
+    } catch (error) {
+      return res
+        .status(400)
+        .json({ error: "Format JSON invalide pour notificationSettings" });
+    }
+
+    // Mettre à jour le profil
+    const profileUpdate = {
+      $set: {
+        notificationSettings: settingsToUpdate,
+      },
+    };
+
+    const updatedProfile = await UserProfileModel.findOneAndUpdate(
+      { _id: findCurrentUser.profileId },
+      profileUpdate,
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "Paramètres de confidentialité mis à jour avec succès",
+      profile: updatedProfile,
+    });
+  } catch (error: any) {
+    console.error("Erreur complète :", error);
+    return res
+      .status(500)
+      .json({ error: "Erreur serveur", details: error.message });
   }
 };

@@ -3,6 +3,21 @@ import { Schema, model, Document, Types } from "mongoose";
 import { Hobies } from "./Hobby";
 import { Interested } from "./Interested";
 
+// Interfaces pour les paramètres imbriqués
+interface PrivacySettings {
+  showVisitedPlaces: boolean;
+  showAchievements: boolean;
+  allowTagging: boolean;
+  publicProfile: boolean;
+}
+
+interface NotificationSettings {
+  newComments: boolean;
+  newLikes: boolean;
+  newFollowers: boolean;
+  appUpdates: boolean;
+}
+
 interface UserProfileInterface extends Document {
   fullName: string;
   city: string | null;
@@ -31,6 +46,10 @@ interface UserProfileInterface extends Document {
   hobbies?: Hobies[];
   intersteds?: Interested[];
   profilPublic: boolean;
+
+  favoriteActivities: string[];
+  privacySettings: PrivacySettings;
+  notificationSettings: NotificationSettings;
 }
 
 const UserProfileSchema = new Schema<UserProfileInterface>({
@@ -62,6 +81,20 @@ const UserProfileSchema = new Schema<UserProfileInterface>({
   interestedId: [
     { type: Schema.Types.ObjectId, ref: "Interested", required: true },
   ],
+  favoriteActivities: { type: [String], default: [] },
+
+  privacySettings: {
+    showVisitedPlaces: { type: Boolean, default: true },
+    showAchievements: { type: Boolean, default: true },
+    allowTagging: { type: Boolean, default: true },
+    publicProfile: { type: Boolean, default: true },
+  },
+  notificationSettings: {
+    newComments: { type: Boolean, default: true },
+    newLikes: { type: Boolean, default: true },
+    newFollowers: { type: Boolean, default: true },
+    appUpdates: { type: Boolean, default: false },
+  },
 });
 
 // Define relations using references (ref)
@@ -76,7 +109,7 @@ UserProfileSchema.virtual("intersteds", {
   localField: "interestedId",
   foreignField: "_id",
 });
-
+UserProfileSchema.set("toJSON", { virtuals: true });
 const UserProfileModel = model<UserProfileInterface>(
   "UserProfile",
   UserProfileSchema

@@ -1,5 +1,5 @@
 import { Router } from "express";
-
+import multer from "multer";
 import { authenticateToken } from "../middlewares/authMiddleware";
 import {
   acceptFriend,
@@ -17,8 +17,12 @@ import {
   getSuggestedUsersController,
   sendFriend,
   getUserByEmail,
+  UpdateBasicInfo,
+  UpdatePrivacySettings,
+  updatNotification,
 } from "../controllers/userController";
 const router = Router();
+import upload from "../middlewares/uploadProfil";
 
 router.get("/currentUser", authenticateToken, CurrentUser);
 
@@ -44,4 +48,32 @@ router.get("/followingByUser/:userId", authenticateToken, getFollowingsByUser);
 router.get("/followersByUser/:userId", authenticateToken, getFollowersByUser);
 
 router.post("/getUserByEmail", getUserByEmail);
+
+router.post(
+  "/updateBasicInfo",
+  authenticateToken,
+  upload.single("image"),
+  (req, res, next) => {
+    UpdateBasicInfo(req, res).catch(next);
+  }
+);
+
+router.post(
+  "/UpdatePrivacy",
+  authenticateToken,
+  upload.none(),
+  (req, res, next) => {
+    UpdatePrivacySettings(req, res).catch(next);
+  }
+);
+
+router.post(
+  "/updatNotification",
+  authenticateToken,
+  upload.none(),
+  (req, res, next) => {
+    updatNotification(req, res).catch(next);
+  }
+);
+
 export default router;

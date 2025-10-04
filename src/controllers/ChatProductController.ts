@@ -16,6 +16,7 @@ export class ChatProductController {
   ): Promise<void> {
     try {
       const { userId, message, image } = req.body;
+
       const authUserId = req.user?.id?._id;
 
       if (!authUserId || !userId) {

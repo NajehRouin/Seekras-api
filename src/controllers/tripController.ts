@@ -9,6 +9,7 @@ import {
   updateSupplyStatusService,
 } from "../services/tripService";
 import { AuthenticatedRequest } from "../middlewares/authMiddleware";
+import { uploadToCloudinary } from "../utils/cloudinary";
 // Contrôleur pour créer un nouveau trip avec upload d'image
 export const createTripController = async (req: Request, res: Response) => {
   // Utiliser le middleware Multer pour gérer l'upload
@@ -66,9 +67,17 @@ export const createTripController = async (req: Request, res: Response) => {
       } catch (error) {
         return res.status(400).json({ message: "Invalid supplies format" });
       }
+      let imagePath = "";
+
+      if (req.file) {
+        const result = await uploadToCloudinary(req.file.path, {
+          folder: "seekras/trips",
+        });
+        imagePath = result?.url;
+      }
 
       // Chemin relatif de l'image pour stockage dans la base de données
-      const imagePath = `uploads/trips/${req.file.filename}`;
+      // const imagePath = `uploads/trips/${req.file.filename}`;
 
       // Appeler le service pour créer le trip
       const newTrip = await createTrip({
@@ -105,12 +114,10 @@ export const createTripController = async (req: Request, res: Response) => {
       });
     } catch (error) {
       const errorMessage = (error as Error).message;
-      res
-        .status(500)
-        .json({
-          message: `Error creating trip: ${errorMessage}`,
-          success: false,
-        });
+      res.status(500).json({
+        message: `Error creating trip: ${errorMessage}`,
+        success: false,
+      });
     }
   });
 };
