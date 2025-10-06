@@ -6,10 +6,8 @@ import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { addOnlineUser, removeOnlineUser } from "./utils/onlineUsers";
 
-import multer from "multer";
-import { uploadToCloudinary } from "./utils/cloudinary";
 dotenv.config();
-const upload = multer({ dest: "uploads/" });
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -111,30 +109,6 @@ io.on("connection", (socket) => {
   });
 });
 
-app.post(
-  "/upload",
-  upload.single("image"),
-  async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "Aucun fichier téléversé" });
-      }
-
-      // Utiliser la fonction de cloudinary.ts pour téléverser l'image
-      const result = await uploadToCloudinary(req.file.path, {
-        folder: "seekras/trips",
-      });
-
-      res.status(200).json({
-        message: "Image téléversée avec succès",
-        data: result,
-      });
-    } catch (error) {
-      console.error("Erreur :", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  }
-);
 // Démarrer le serveur
 server.listen(PORT, () => {
   console.log(`Serveur lancé sur http://localhost:${PORT}`);
